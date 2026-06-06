@@ -50,6 +50,10 @@ private struct SelectedPage: View {
             ExplorerView()
         case .qwenCode:
             QwenCodeView()
+        case .claudeCode:
+            AIComingSoonView(title: destination.title, assetName: "ClaudeLogo")
+        case .openAICodex:
+            AIComingSoonView(title: destination.title, assetName: "OpenAILogo")
         case .sourceControl:
             SourceControlView()
         case .terminal:
@@ -66,8 +70,8 @@ private struct SidebarIcon: View {
 
     var body: some View {
         Group {
-            if destination == .qwenCode {
-                Image("QwenLogo")
+            if let assetName = destination.assetName {
+                Image(assetName)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 24, height: 24)
@@ -86,6 +90,40 @@ private struct SidebarIcon: View {
             }
         }
         .contentShape(Rectangle())
+    }
+}
+
+private struct AIComingSoonView: View {
+    let title: String
+    let assetName: String
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+
+                Text(title)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+            }
+            .frame(height: 62)
+            .padding(.horizontal, 16)
+            .background(Color(red: 0.08, green: 0.09, blue: 0.10))
+
+            Divider()
+                .overlay(Color.white.opacity(0.08))
+
+            Text("Coming soon")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.white.opacity(0.62))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 }
 

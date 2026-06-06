@@ -4,6 +4,8 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
     case explorer
     case sourceControl
     case qwenCode
+    case claudeCode
+    case openAICodex
     case terminal
     case settings
 
@@ -17,6 +19,10 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
             "Source Control"
         case .qwenCode:
             "Qwen Code"
+        case .claudeCode:
+            "Claude Code"
+        case .openAICodex:
+            "OpenAI Codex"
         case .terminal:
             "Terminal"
         case .settings:
@@ -32,10 +38,27 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
             "point.3.connected.trianglepath.dotted"
         case .qwenCode:
             ""
+        case .claudeCode:
+            ""
+        case .openAICodex:
+            ""
         case .terminal:
             "terminal"
         case .settings:
             "gearshape"
+        }
+    }
+
+    var assetName: String? {
+        switch self {
+        case .qwenCode:
+            "QwenLogo"
+        case .claudeCode:
+            "ClaudeLogo"
+        case .openAICodex:
+            "OpenAILogo"
+        default:
+            nil
         }
     }
 }
