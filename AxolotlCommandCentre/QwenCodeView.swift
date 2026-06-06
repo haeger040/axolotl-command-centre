@@ -103,19 +103,33 @@ struct QwenCodeView: View {
 
     private func chatDetail(_ chat: QwenChat) -> some View {
         VStack(spacing: 0) {
-            if chat.messages.isEmpty {
+            if chat.messages.isEmpty && !isSending {
                 Text("Ask Qwen Code about this workspace")
                     .font(.system(size: 16))
                     .foregroundStyle(.white.opacity(0.58))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(chat.messages) { message in
-                            QwenMessageBubble(message: message)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(chat.messages) { message in
+                                QwenMessageBubble(message: message)
+                                    .id(message.id)
+                            }
+
+                            if isSending {
+                                QwenWorkingBubble()
+                                    .id("qwen-working")
+                            }
                         }
+                        .padding(16)
                     }
-                    .padding(16)
+                    .onChange(of: chat.messages.count) {
+                        scrollToLatest(in: proxy, chat: chat)
+                    }
+                    .onChange(of: isSending) {
+                        scrollToLatest(in: proxy, chat: chat)
+                    }
                 }
             }
 
@@ -222,6 +236,17 @@ struct QwenCodeView: View {
         errorMessage = nil
 
         do {
+            let optimisticMessage = QwenMessage(
+                id: UUID().uuidString,
+                role: .user,
+                content: prompt,
+                createdAt: ISO8601DateFormatter().string(from: Date())
+            )
+
+            if let currentChat = selectedChat {
+                selectedChat = currentChat.appendingMessage(optimisticMessage)
+            }
+
             selectedChat = try await client.sendQwenMessage(chatID: selectedChatID, prompt: prompt)
             await loadChats()
         } catch {
@@ -229,6 +254,17 @@ struct QwenCodeView: View {
         }
 
         isSending = false
+    }
+
+    private func scrollToLatest(in proxy: ScrollViewProxy, chat: QwenChat) {
+        let targetID = isSending ? "qwen-working" : chat.messages.last?.id
+        guard let targetID else { return }
+
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.2)) {
+                proxy.scrollTo(targetID, anchor: .bottom)
+            }
+        }
     }
 }
 
@@ -282,6 +318,40 @@ private struct QwenMessageBubble: View {
         case .assistant:
             Color.white.opacity(0.08)
         }
+    }
+}
+
+private struct QwenWorkingBubble: View {
+    var body: some View {
+        HStack {
+            HStack(spacing: 10) {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(.white.opacity(0.72))
+
+                Text("Qwen is working")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.72))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+
+            Spacer(minLength: 34)
+        }
+    }
+}
+
+private extension QwenChat {
+    func appendingMessage(_ message: QwenMessage) -> QwenChat {
+        QwenChat(
+            id: id,
+            title: title,
+            workspace: workspace,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            messages: messages + [message]
+        )
     }
 }
 
