@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket
 from pydantic import BaseModel
 
-from backend import git_service, qwen_service
+from backend import git_service, qwen_service, terminal_service
 
 
 EXPLORER_ROOT = Path("/Users/jules/Documents/testrepo1234").resolve()
@@ -116,3 +116,28 @@ def git_push() -> git_service.GitCommandResponse:
 @app.post("/git/sync", response_model=git_service.GitCommandResponse)
 def git_sync() -> git_service.GitCommandResponse:
     return git_service.sync()
+
+
+@app.get("/terminals", response_model=terminal_service.TerminalListResponse)
+def terminals() -> terminal_service.TerminalListResponse:
+    return terminal_service.list_terminals()
+
+
+@app.post("/terminals", response_model=terminal_service.TerminalSummary)
+def create_terminal(request: terminal_service.TerminalCreateRequest) -> terminal_service.TerminalSummary:
+    return terminal_service.create_terminal(request)
+
+
+@app.delete("/terminals/{terminal_id}")
+def delete_terminal(terminal_id: str) -> dict[str, str]:
+    return terminal_service.delete_terminal(terminal_id)
+
+
+@app.post("/terminals/{terminal_id}/resize", response_model=terminal_service.TerminalSummary)
+def resize_terminal(terminal_id: str, request: terminal_service.TerminalResizeRequest) -> terminal_service.TerminalSummary:
+    return terminal_service.resize_terminal(terminal_id, request)
+
+
+@app.websocket("/terminals/{terminal_id}/ws")
+async def terminal_ws(terminal_id: str, websocket: WebSocket) -> None:
+    await terminal_service.terminal_socket(terminal_id, websocket)

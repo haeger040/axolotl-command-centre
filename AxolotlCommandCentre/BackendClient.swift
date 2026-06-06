@@ -81,6 +81,24 @@ struct BackendClient {
         try await post(baseURL.appending(path: "git/sync"), body: EmptyRequest())
     }
 
+    func fetchTerminals() async throws -> TerminalListResponse {
+        try await get(baseURL.appending(path: "terminals"))
+    }
+
+    func createTerminal() async throws -> TerminalSummary {
+        try await post(baseURL.appending(path: "terminals"), body: TerminalCreateRequest(title: nil, cwd: nil))
+    }
+
+    func resizeTerminal(id: String, cols: Int, rows: Int) async throws -> TerminalSummary {
+        try await post(baseURL.appending(path: "terminals/\(id)/resize"), body: TerminalResizeRequest(cols: cols, rows: rows))
+    }
+
+    func terminalWebSocketURL(id: String) -> URL {
+        var components = URLComponents(url: baseURL.appending(path: "terminals/\(id)/ws"), resolvingAgainstBaseURL: false)!
+        components.scheme = baseURL.scheme == "https" ? "wss" : "ws"
+        return components.url!
+    }
+
     private func get<T: Decodable>(_ url: URL) async throws -> T {
         let (data, response) = try await URLSession.shared.data(from: url)
         try validate(response: response, data: data)
@@ -265,3 +283,33 @@ private struct GitCommitRequest: Encodable {
 }
 
 private struct EmptyRequest: Encodable {}
+
+struct TerminalListResponse: Decodable {
+    let terminals: [TerminalSummary]
+}
+
+struct TerminalSummary: Decodable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let cwd: String
+    let createdAt: String
+    let alive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case cwd
+        case createdAt = "created_at"
+        case alive
+    }
+}
+
+private struct TerminalCreateRequest: Encodable {
+    let title: String?
+    let cwd: String?
+}
+
+private struct TerminalResizeRequest: Encodable {
+    let cols: Int
+    let rows: Int
+}

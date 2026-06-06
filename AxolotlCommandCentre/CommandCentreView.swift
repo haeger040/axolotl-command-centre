@@ -52,7 +52,9 @@ private struct SelectedPage: View {
             QwenCodeView()
         case .sourceControl:
             SourceControlView()
-        case .terminal, .settings:
+        case .terminal:
+            TerminalView()
+        case .settings:
             PageFallback(destination: destination)
         }
     }
