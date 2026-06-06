@@ -22,6 +22,17 @@ class ExplorerResponse(BaseModel):
     entries: list[ExplorerEntry]
 
 
+class FileContentResponse(BaseModel):
+    path: str
+    name: str
+    content: str
+
+
+class FileSaveRequest(BaseModel):
+    path: str
+    content: str
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -46,6 +57,42 @@ def explorer() -> ExplorerResponse:
     entries.sort(key=lambda entry: (entry.kind != "directory", entry.name.lower()))
 
     return ExplorerResponse(root=str(EXPLORER_ROOT), entries=entries)
+
+
+@app.get("/files", response_model=FileContentResponse)
+def read_file(path: str) -> FileContentResponse:
+    file_path = _safe_file_path(path)
+    data = file_path.read_bytes()
+    if len(data) > 1_000_000:
+        raise HTTPException(status_code=413, detail="File is too large to edit")
+    if b"\x00" in data:
+        raise HTTPException(status_code=415, detail="Binary files are not supported")
+    try:
+        content = data.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise HTTPException(status_code=415, detail="Only UTF-8 text files are supported") from error
+    return FileContentResponse(path=str(file_path), name=file_path.name, content=content)
+
+
+@app.put("/files", response_model=FileContentResponse)
+def save_file(request: FileSaveRequest) -> FileContentResponse:
+    file_path = _safe_file_path(request.path)
+    encoded = request.content.encode("utf-8")
+    if len(encoded) > 1_000_000:
+        raise HTTPException(status_code=413, detail="File is too large to save")
+    file_path.write_bytes(encoded)
+    return FileContentResponse(path=str(file_path), name=file_path.name, content=request.content)
+
+
+def _safe_file_path(path: str) -> Path:
+    file_path = Path(path).expanduser().resolve()
+    if not file_path.is_relative_to(EXPLORER_ROOT):
+        raise HTTPException(status_code=403, detail="Path is outside the workspace")
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File does not exist: {path}")
+    if not file_path.is_file():
+        raise HTTPException(status_code=400, detail="Path is not a file")
+    return file_path
 
 
 @app.get("/qwen/chats", response_model=qwen_service.QwenChatsResponse)

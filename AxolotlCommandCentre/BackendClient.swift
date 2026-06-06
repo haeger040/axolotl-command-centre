@@ -15,6 +15,18 @@ struct BackendClient {
         return try JSONDecoder().decode(ExplorerResponse.self, from: data)
     }
 
+    func fetchFile(path: String) async throws -> FileContentResponse {
+        var components = URLComponents(url: baseURL.appending(path: "files"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "path", value: path),
+        ]
+        return try await get(components.url!)
+    }
+
+    func saveFile(path: String, content: String) async throws -> FileContentResponse {
+        try await put(baseURL.appending(path: "files"), body: FileSaveRequest(path: path, content: content))
+    }
+
     func fetchQwenChats() async throws -> QwenChatsResponse {
         let url = baseURL.appending(path: "qwen/chats")
         return try await get(url)
@@ -120,6 +132,17 @@ struct BackendClient {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    private func put<T: Decodable, Body: Encodable>(_ url: URL, body: Body) async throws -> T {
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
     private func delete(_ url: URL) async throws {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
@@ -174,6 +197,17 @@ struct ExplorerEntry: Decodable, Identifiable {
 enum EntryKind: String, Decodable {
     case directory
     case file
+}
+
+struct FileContentResponse: Decodable {
+    let path: String
+    let name: String
+    let content: String
+}
+
+private struct FileSaveRequest: Encodable {
+    let path: String
+    let content: String
 }
 
 struct QwenChatsResponse: Decodable {
