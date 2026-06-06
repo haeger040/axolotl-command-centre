@@ -177,6 +177,7 @@ struct TerminalView: View {
 
     private func attach(to id: String) {
         selectedID = id
+        errorMessage = nil
         output = ""
         socket?.cancel(with: .goingAway, reason: nil)
 
@@ -199,15 +200,20 @@ struct TerminalView: View {
                    let event = try? JSONDecoder().decode(TerminalSocketEvent.self, from: data),
                    event.type == "output" {
                     DispatchQueue.main.async {
+                        guard task === socket else { return }
                         applyTerminalOutput(event.data ?? "", to: &output)
                         if output.count > 120_000 {
                             output.removeFirst(output.count - 100_000)
                         }
                     }
                 }
-                receiveLoop(task)
+                DispatchQueue.main.async {
+                    guard task === socket else { return }
+                    receiveLoop(task)
+                }
             case .failure(let error):
                 DispatchQueue.main.async {
+                    guard task === socket else { return }
                     errorMessage = error.localizedDescription
                 }
             }
@@ -222,6 +228,7 @@ struct TerminalView: View {
         socket.send(.string(string)) { error in
             if let error {
                 DispatchQueue.main.async {
+                    guard socket === self.socket else { return }
                     errorMessage = error.localizedDescription
                 }
             }
