@@ -17,3 +17,5 @@ The Explorer endpoint is hard-wired to:
 ```text
 /Users/jules/Documents/testrepo1234
 ```
+
+Qwen Code chat endpoints also run `qwen` from that same workspace.

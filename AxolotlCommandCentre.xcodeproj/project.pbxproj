@@ -13,6 +13,8 @@
 		8A8B7A332C6E4C5B00100001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A8B7A322C6E4C5B00100001 /* Assets.xcassets */; };
 		8A8B7A362C6E4C5B00100001 /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A352C6E4C5B00100001 /* BackendClient.swift */; };
 		8A8B7A382C6E4C5B00100001 /* ExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A372C6E4C5B00100001 /* ExplorerView.swift */; };
+		8A8B7A3B2C6E4C5B00100001 /* QwenCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A3A2C6E4C5B00100001 /* QwenCodeView.swift */; };
+		8A8B7A3D2C6E4C5B00100001 /* SourceControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A3C2C6E4C5B00100001 /* SourceControlView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +26,8 @@
 		8A8B7A352C6E4C5B00100001 /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
 		8A8B7A372C6E4C5B00100001 /* ExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerView.swift; sourceTree = "<group>"; };
 		8A8B7A392C6E4C5B00100001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		8A8B7A3A2C6E4C5B00100001 /* QwenCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenCodeView.swift; sourceTree = "<group>"; };
+		8A8B7A3C2C6E4C5B00100001 /* SourceControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceControlView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,6 +65,8 @@
 				8A8B7A302C6E4C5B00100001 /* SidebarDestination.swift */,
 				8A8B7A352C6E4C5B00100001 /* BackendClient.swift */,
 				8A8B7A372C6E4C5B00100001 /* ExplorerView.swift */,
+				8A8B7A3A2C6E4C5B00100001 /* QwenCodeView.swift */,
+				8A8B7A3C2C6E4C5B00100001 /* SourceControlView.swift */,
 				8A8B7A392C6E4C5B00100001 /* Info.plist */,
 				8A8B7A322C6E4C5B00100001 /* Assets.xcassets */,
 			);
@@ -143,6 +149,8 @@
 				8A8B7A362C6E4C5B00100001 /* BackendClient.swift in Sources */,
 				8A8B7A312C6E4C5B00100001 /* SidebarDestination.swift in Sources */,
 				8A8B7A382C6E4C5B00100001 /* ExplorerView.swift in Sources */,
+				8A8B7A3B2C6E4C5B00100001 /* QwenCodeView.swift in Sources */,
+				8A8B7A3D2C6E4C5B00100001 /* SourceControlView.swift in Sources */,
 				8A8B7A2D2C6E4C5B00100001 /* AxolotlCommandCentreApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

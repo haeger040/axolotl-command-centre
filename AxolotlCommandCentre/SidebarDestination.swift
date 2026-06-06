@@ -3,7 +3,7 @@ import SwiftUI
 enum SidebarDestination: String, CaseIterable, Identifiable {
     case explorer
     case sourceControl
-    case ai
+    case qwenCode
     case terminal
     case settings
 
@@ -15,8 +15,8 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
             "Explorer"
         case .sourceControl:
             "Source Control"
-        case .ai:
-            "AI"
+        case .qwenCode:
+            "Qwen Code"
         case .terminal:
             "Terminal"
         case .settings:
@@ -30,8 +30,8 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
             "folder"
         case .sourceControl:
             "point.3.connected.trianglepath.dotted"
-        case .ai:
-            "sparkles"
+        case .qwenCode:
+            ""
         case .terminal:
             "terminal"
         case .settings:
