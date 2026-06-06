@@ -3,16 +3,38 @@ import Foundation
 struct BackendClient {
     var baseURL = URL(string: "http://10.10.11.214:8000")!
 
-    func fetchExplorer() async throws -> ExplorerResponse {
-        let url = baseURL.appending(path: "explorer")
-        let (data, response) = try await URLSession.shared.data(from: url)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
-            throw BackendError.unexpectedResponse
+    func fetchExplorer(path: String? = nil) async throws -> ExplorerResponse {
+        var components = URLComponents(url: baseURL.appending(path: "explorer"), resolvingAgainstBaseURL: false)!
+        if let path {
+            components.queryItems = [
+                URLQueryItem(name: "path", value: path),
+            ]
         }
+        return try await get(components.url!)
+    }
 
-        return try JSONDecoder().decode(ExplorerResponse.self, from: data)
+    func createFile(parentPath: String, name: String) async throws -> ExplorerEntry {
+        try await post(baseURL.appending(path: "filesystem/file"), body: FilesystemCreateRequest(parentPath: parentPath, name: name))
+    }
+
+    func createFolder(parentPath: String, name: String) async throws -> ExplorerEntry {
+        try await post(baseURL.appending(path: "filesystem/folder"), body: FilesystemCreateRequest(parentPath: parentPath, name: name))
+    }
+
+    func renamePath(path: String, name: String) async throws -> ExplorerEntry {
+        try await post(baseURL.appending(path: "filesystem/rename"), body: FilesystemRenameRequest(path: path, name: name))
+    }
+
+    func copyPath(sourcePath: String, destinationFolder: String) async throws -> ExplorerEntry {
+        try await post(baseURL.appending(path: "filesystem/copy"), body: FilesystemCopyRequest(sourcePath: sourcePath, destinationFolder: destinationFolder))
+    }
+
+    func deletePath(_ path: String) async throws {
+        var components = URLComponents(url: baseURL.appending(path: "filesystem"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "path", value: path),
+        ]
+        try await delete(components.url!)
     }
 
     func fetchFile(path: String) async throws -> FileContentResponse {
@@ -208,6 +230,31 @@ struct FileContentResponse: Decodable {
 private struct FileSaveRequest: Encodable {
     let path: String
     let content: String
+}
+
+private struct FilesystemCreateRequest: Encodable {
+    let parentPath: String
+    let name: String
+
+    enum CodingKeys: String, CodingKey {
+        case parentPath = "parent_path"
+        case name
+    }
+}
+
+private struct FilesystemRenameRequest: Encodable {
+    let path: String
+    let name: String
+}
+
+private struct FilesystemCopyRequest: Encodable {
+    let sourcePath: String
+    let destinationFolder: String
+
+    enum CodingKeys: String, CodingKey {
+        case sourcePath = "source_path"
+        case destinationFolder = "destination_folder"
+    }
 }
 
 struct QwenChatsResponse: Decodable {

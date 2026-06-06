@@ -1,7 +1,9 @@
+import shutil
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from backend import git_service, qwen_service, terminal_service
 
@@ -33,30 +35,46 @@ class FileSaveRequest(BaseModel):
     content: str
 
 
+class FilesystemCreateRequest(BaseModel):
+    parent_path: str = Field(validation_alias=AliasChoices("parent_path", "parentPath"))
+    name: str
+
+
+class FilesystemRenameRequest(BaseModel):
+    path: str
+    name: str
+
+
+class FilesystemCopyRequest(BaseModel):
+    source_path: str = Field(validation_alias=AliasChoices("source_path", "sourcePath"))
+    destination_folder: str = Field(validation_alias=AliasChoices("destination_folder", "destinationFolder"))
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.get("/explorer", response_model=ExplorerResponse)
-def explorer() -> ExplorerResponse:
+def explorer(path: Optional[str] = None) -> ExplorerResponse:
     if not EXPLORER_ROOT.exists():
         raise HTTPException(status_code=404, detail=f"Root does not exist: {EXPLORER_ROOT}")
 
     if not EXPLORER_ROOT.is_dir():
         raise HTTPException(status_code=400, detail=f"Root is not a directory: {EXPLORER_ROOT}")
 
+    folder = _safe_folder_path(path or str(EXPLORER_ROOT))
     entries = [
         ExplorerEntry(
             name=entry.name,
             path=str(entry),
             kind="directory" if entry.is_dir() else "file",
         )
-        for entry in EXPLORER_ROOT.iterdir()
+        for entry in folder.iterdir()
     ]
     entries.sort(key=lambda entry: (entry.kind != "directory", entry.name.lower()))
 
-    return ExplorerResponse(root=str(EXPLORER_ROOT), entries=entries)
+    return ExplorerResponse(root=str(folder), entries=entries)
 
 
 @app.get("/files", response_model=FileContentResponse)
@@ -84,15 +102,105 @@ def save_file(request: FileSaveRequest) -> FileContentResponse:
     return FileContentResponse(path=str(file_path), name=file_path.name, content=request.content)
 
 
+@app.post("/filesystem/file", response_model=ExplorerEntry)
+def create_file(request: FilesystemCreateRequest) -> ExplorerEntry:
+    parent = _safe_folder_path(request.parent_path)
+    name = _safe_name(request.name)
+    file_path = parent / name
+    if file_path.exists():
+        raise HTTPException(status_code=409, detail="A file or folder with that name already exists")
+    file_path.write_text("", encoding="utf-8")
+    return ExplorerEntry(name=file_path.name, path=str(file_path), kind="file")
+
+
+@app.post("/filesystem/folder", response_model=ExplorerEntry)
+def create_folder(request: FilesystemCreateRequest) -> ExplorerEntry:
+    parent = _safe_folder_path(request.parent_path)
+    name = _safe_name(request.name)
+    folder_path = parent / name
+    if folder_path.exists():
+        raise HTTPException(status_code=409, detail="A file or folder with that name already exists")
+    folder_path.mkdir()
+    return ExplorerEntry(name=folder_path.name, path=str(folder_path), kind="directory")
+
+
+@app.post("/filesystem/rename", response_model=ExplorerEntry)
+def rename_path(request: FilesystemRenameRequest) -> ExplorerEntry:
+    source = _safe_existing_path(request.path)
+    name = _safe_name(request.name)
+    destination = source.parent / name
+    if destination.exists():
+        raise HTTPException(status_code=409, detail="A file or folder with that name already exists")
+    source.rename(destination)
+    return ExplorerEntry(
+        name=destination.name,
+        path=str(destination),
+        kind="directory" if destination.is_dir() else "file",
+    )
+
+
+@app.post("/filesystem/copy", response_model=ExplorerEntry)
+def copy_path(request: FilesystemCopyRequest) -> ExplorerEntry:
+    source = _safe_existing_path(request.source_path)
+    destination_folder = _safe_folder_path(request.destination_folder)
+    destination = destination_folder / source.name
+    if destination.exists():
+        raise HTTPException(status_code=409, detail="A file or folder with that name already exists")
+    if source.is_dir() and destination_folder.is_relative_to(source):
+        raise HTTPException(status_code=400, detail="Cannot copy a folder into itself")
+    if source.is_dir():
+        shutil.copytree(source, destination)
+    else:
+        shutil.copy2(source, destination)
+    return ExplorerEntry(
+        name=destination.name,
+        path=str(destination),
+        kind="directory" if destination.is_dir() else "file",
+    )
+
+
+@app.delete("/filesystem")
+def delete_path(path: str) -> dict[str, str]:
+    target = _safe_existing_path(path)
+    if target == EXPLORER_ROOT:
+        raise HTTPException(status_code=400, detail="Cannot delete the workspace root")
+    if target.is_dir():
+        shutil.rmtree(target)
+    else:
+        target.unlink()
+    return {"status": "ok"}
+
+
 def _safe_file_path(path: str) -> Path:
-    file_path = Path(path).expanduser().resolve()
-    if not file_path.is_relative_to(EXPLORER_ROOT):
-        raise HTTPException(status_code=403, detail="Path is outside the workspace")
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"File does not exist: {path}")
+    file_path = _safe_existing_path(path)
     if not file_path.is_file():
         raise HTTPException(status_code=400, detail="Path is not a file")
     return file_path
+
+
+def _safe_folder_path(path: str) -> Path:
+    folder_path = _safe_existing_path(path)
+    if not folder_path.is_dir():
+        raise HTTPException(status_code=400, detail="Path is not a folder")
+    return folder_path
+
+
+def _safe_existing_path(path: str) -> Path:
+    target = Path(path).expanduser().resolve()
+    if not target.is_relative_to(EXPLORER_ROOT):
+        raise HTTPException(status_code=403, detail="Path is outside the workspace")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=f"Path does not exist: {path}")
+    return target
+
+
+def _safe_name(name: str) -> str:
+    clean = name.strip()
+    if not clean:
+        raise HTTPException(status_code=400, detail="Name cannot be empty")
+    if clean in {".", ".."} or "/" in clean or "\\" in clean:
+        raise HTTPException(status_code=400, detail="Invalid name")
+    return clean
 
 
 @app.get("/qwen/chats", response_model=qwen_service.QwenChatsResponse)
