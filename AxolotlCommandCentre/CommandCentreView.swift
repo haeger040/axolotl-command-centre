@@ -10,7 +10,7 @@ struct CommandCentreView: View {
             Divider()
                 .overlay(Color.white.opacity(0.08))
 
-            PageFallback(destination: selection)
+            SelectedPage(destination: selection)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(red: 0.08, green: 0.09, blue: 0.10))
@@ -51,22 +51,29 @@ private struct Sidebar: View {
     }
 }
 
+private struct SelectedPage: View {
+    let destination: SidebarDestination
+
+    var body: some View {
+        switch destination {
+        case .explorer:
+            ExplorerView()
+        case .sourceControl, .ai, .terminal, .settings:
+            PageFallback(destination: destination)
+        }
+    }
+}
+
 private struct PageFallback: View {
     let destination: SidebarDestination
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("\(destination.title) page")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white)
-
-            Text("Functionality will be added later.")
-                .font(.system(size: 15))
-                .foregroundStyle(.white.opacity(0.58))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 22)
-        .padding(.top, 26)
+        Text("\(destination.title) page")
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.horizontal, 22)
+            .padding(.top, 26)
     }
 }
 
