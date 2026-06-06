@@ -303,18 +303,21 @@ private func applyTerminalOutput(_ raw: String, to output: inout String) {
 private struct TerminalTextSurface: UIViewRepresentable {
     let text: String
     let onInput: (String) -> Void
+    private let cursor = "\u{2588}"
 
     func makeUIView(context: Context) -> TerminalUITextView {
         let view = TerminalUITextView()
         view.backgroundColor = UIColor(red: 0.03, green: 0.035, blue: 0.04, alpha: 1)
         view.textColor = .white
-        view.tintColor = .white
+        view.tintColor = .clear
         view.font = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         view.autocorrectionType = .no
         view.autocapitalizationType = .none
         view.smartQuotesType = .no
         view.smartDashesType = .no
         view.keyboardType = .asciiCapable
+        view.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        view.textContainer.lineFragmentPadding = 0
         view.alwaysBounceVertical = true
         view.delegate = context.coordinator
         view.inputHandler = onInput
@@ -322,9 +325,10 @@ private struct TerminalTextSurface: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: TerminalUITextView, context: Context) {
-        if uiView.text != text {
-            uiView.text = text
-            let end = NSRange(location: uiView.text.count, length: 0)
+        let renderedText = text + cursor
+        if uiView.text != renderedText {
+            uiView.text = renderedText
+            let end = NSRange(location: max(uiView.text.utf16.count - cursor.utf16.count, 0), length: 0)
             uiView.selectedRange = end
             let bottom = NSRange(location: max(uiView.text.count - 1, 0), length: min(uiView.text.count, 1))
             uiView.scrollRangeToVisible(bottom)
@@ -351,7 +355,7 @@ private struct TerminalTextSurface: UIViewRepresentable {
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
-            let end = NSRange(location: textView.text.count, length: 0)
+            let end = NSRange(location: max(textView.text.utf16.count - 1, 0), length: 0)
             if textView.selectedRange.location != end.location || textView.selectedRange.length != 0 {
                 textView.selectedRange = end
             }
@@ -368,6 +372,10 @@ private final class TerminalUITextView: UITextView {
 
     override func deleteBackward() {
         sendBackspace()
+    }
+
+    override func caretRect(for position: UITextPosition) -> CGRect {
+        .zero
     }
 
     func sendBackspace() {
