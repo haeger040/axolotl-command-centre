@@ -16,6 +16,7 @@
 		8A8B7A3B2C6E4C5B00100001 /* QwenCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A3A2C6E4C5B00100001 /* QwenCodeView.swift */; };
 		8A8B7A3D2C6E4C5B00100001 /* SourceControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A3C2C6E4C5B00100001 /* SourceControlView.swift */; };
 		8A8B7A3F2C6E4C5B00100001 /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A3E2C6E4C5B00100001 /* TerminalView.swift */; };
+		8A8B7A412C6E4C5B00100001 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8B7A402C6E4C5B00100001 /* WelcomeView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 		8A8B7A3A2C6E4C5B00100001 /* QwenCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenCodeView.swift; sourceTree = "<group>"; };
 		8A8B7A3C2C6E4C5B00100001 /* SourceControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceControlView.swift; sourceTree = "<group>"; };
 		8A8B7A3E2C6E4C5B00100001 /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
+		8A8B7A402C6E4C5B00100001 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +72,7 @@
 				8A8B7A3A2C6E4C5B00100001 /* QwenCodeView.swift */,
 				8A8B7A3C2C6E4C5B00100001 /* SourceControlView.swift */,
 				8A8B7A3E2C6E4C5B00100001 /* TerminalView.swift */,
+				8A8B7A402C6E4C5B00100001 /* WelcomeView.swift */,
 				8A8B7A392C6E4C5B00100001 /* Info.plist */,
 				8A8B7A322C6E4C5B00100001 /* Assets.xcassets */,
 			);
@@ -155,6 +158,7 @@
 				8A8B7A3B2C6E4C5B00100001 /* QwenCodeView.swift in Sources */,
 				8A8B7A3D2C6E4C5B00100001 /* SourceControlView.swift in Sources */,
 				8A8B7A3F2C6E4C5B00100001 /* TerminalView.swift in Sources */,
+				8A8B7A412C6E4C5B00100001 /* WelcomeView.swift in Sources */,
 				8A8B7A2D2C6E4C5B00100001 /* AxolotlCommandCentreApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

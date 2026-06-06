@@ -2,9 +2,17 @@ import SwiftUI
 
 @main
 struct AxolotlCommandCentreApp: App {
+    @AppStorage("hasUnlockedWelcome") private var hasUnlockedWelcome = false
+
     var body: some Scene {
         WindowGroup {
-            CommandCentreView()
+            if hasUnlockedWelcome {
+                CommandCentreView()
+            } else {
+                WelcomeView {
+                    hasUnlockedWelcome = true
+                }
+            }
         }
     }
 }
