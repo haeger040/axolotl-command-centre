@@ -89,6 +89,10 @@ struct BackendClient {
         try await post(baseURL.appending(path: "terminals"), body: TerminalCreateRequest(title: nil, cwd: nil))
     }
 
+    func deleteTerminal(id: String) async throws {
+        try await delete(baseURL.appending(path: "terminals/\(id)"))
+    }
+
     func resizeTerminal(id: String, cols: Int, rows: Int) async throws -> TerminalSummary {
         try await post(baseURL.appending(path: "terminals/\(id)/resize"), body: TerminalResizeRequest(cols: cols, rows: rows))
     }
@@ -114,6 +118,14 @@ struct BackendClient {
         let (data, response) = try await URLSession.shared.data(for: request)
         try validate(response: response, data: data)
         return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private func delete(_ url: URL) async throws {
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
     }
 
     private func validate(response: URLResponse, data: Data) throws {

@@ -3,7 +3,6 @@ import fcntl
 import os
 import pty
 import select
-import signal
 import struct
 import subprocess
 import termios
@@ -15,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import HTTPException, WebSocket
+from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 
@@ -134,11 +133,13 @@ class TerminalManager:
         _set_window_size(master_fd, DEFAULT_COLS, DEFAULT_ROWS)
 
         env = os.environ.copy()
-        env["TERM"] = "xterm-256color"
-        env["SHELL"] = "/bin/zsh"
+        env["TERM"] = "dumb"
+        env["SHELL"] = "/bin/bash"
+        env["PS1"] = r"\u@\h \W % "
+        env["BASH_SILENCE_DEPRECATION_WARNING"] = "1"
 
         process = subprocess.Popen(
-            ["/bin/zsh", "-l"],
+            ["/bin/bash", "--noprofile", "--norc", "-i"],
             cwd=str(cwd_path),
             stdin=slave_fd,
             stdout=slave_fd,
@@ -230,7 +231,10 @@ async def terminal_socket(terminal_id: str, websocket: WebSocket) -> None:
         for task in pending:
             task.cancel()
         for task in done:
-            task.result()
+            try:
+                task.result()
+            except WebSocketDisconnect:
+                pass
     finally:
         session.detach(client)
 

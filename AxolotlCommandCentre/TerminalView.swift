@@ -47,21 +47,37 @@ struct TerminalView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(terminals) { terminal in
-                        Button {
-                            attach(to: terminal.id)
-                        } label: {
-                            Text(terminal.title)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(selectedID == terminal.id ? .white : .white.opacity(0.62))
-                                .lineLimit(1)
-                                .padding(.horizontal, 10)
-                                .frame(height: 32)
-                                .background(
-                                    selectedID == terminal.id ? Color.white.opacity(0.14) : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 8)
-                                )
+                        HStack(spacing: 6) {
+                            Button {
+                                attach(to: terminal.id)
+                            } label: {
+                                Text(terminal.title)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(selectedID == terminal.id ? .white : .white.opacity(0.62))
+                                    .lineLimit(1)
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                Task {
+                                    await closeTerminal(terminal)
+                                }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.white.opacity(selectedID == terminal.id ? 0.78 : 0.50))
+                                    .frame(width: 18, height: 18)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Close terminal")
                         }
-                        .buttonStyle(.plain)
+                        .padding(.leading, 10)
+                        .padding(.trailing, 6)
+                        .frame(height: 32)
+                        .background(
+                            selectedID == terminal.id ? Color.white.opacity(0.14) : Color.white.opacity(0.06),
+                            in: RoundedRectangle(cornerRadius: 8)
+                        )
                     }
                 }
             }
@@ -116,6 +132,49 @@ struct TerminalView: View {
         }
     }
 
+    private func closeTerminal(_ terminal: TerminalSummary) async {
+        let wasSelected = selectedID == terminal.id
+        let nextSelection = nextTerminalID(afterClosing: terminal.id)
+
+        do {
+            try await client.deleteTerminal(id: terminal.id)
+            terminals.removeAll { $0.id == terminal.id }
+
+            if wasSelected {
+                socket?.cancel(with: .goingAway, reason: nil)
+                socket = nil
+                output = ""
+
+                if let nextSelection {
+                    attach(to: nextSelection)
+                } else {
+                    selectedID = nil
+                    let terminal = try await client.createTerminal()
+                    terminals.append(terminal)
+                    attach(to: terminal.id)
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func nextTerminalID(afterClosing id: String) -> String? {
+        guard let index = terminals.firstIndex(where: { $0.id == id }) else {
+            return terminals.first?.id
+        }
+
+        if index + 1 < terminals.count {
+            return terminals[index + 1].id
+        }
+
+        if index > 0 {
+            return terminals[index - 1].id
+        }
+
+        return nil
+    }
+
     private func attach(to id: String) {
         selectedID = id
         output = ""
@@ -140,7 +199,7 @@ struct TerminalView: View {
                    let event = try? JSONDecoder().decode(TerminalSocketEvent.self, from: data),
                    event.type == "output" {
                     DispatchQueue.main.async {
-                        output.append(event.data ?? "")
+                        applyTerminalOutput(event.data ?? "", to: &output)
                         if output.count > 120_000 {
                             output.removeFirst(output.count - 100_000)
                         }
@@ -175,6 +234,65 @@ private struct TerminalSocketEvent: Codable {
     let data: String?
 }
 
+private func applyTerminalOutput(_ raw: String, to output: inout String) {
+    var index = raw.startIndex
+
+    while index < raw.endIndex {
+        let scalar = raw[index].unicodeScalars.first?.value
+
+        if scalar == 0x1B {
+            index = raw.index(after: index)
+            guard index < raw.endIndex else { break }
+
+            if raw[index] == "[" {
+                index = raw.index(after: index)
+                while index < raw.endIndex {
+                    let value = raw[index].unicodeScalars.first?.value ?? 0
+                    index = raw.index(after: index)
+                    if value >= 0x40 && value <= 0x7E {
+                        break
+                    }
+                }
+                continue
+            }
+
+            if raw[index] == "]" {
+                index = raw.index(after: index)
+                while index < raw.endIndex {
+                    let value = raw[index].unicodeScalars.first?.value ?? 0
+                    index = raw.index(after: index)
+                    if value == 0x07 {
+                        break
+                    }
+                    if value == 0x1B, index < raw.endIndex, raw[index] == "\\" {
+                        index = raw.index(after: index)
+                        break
+                    }
+                }
+                continue
+            }
+
+            index = raw.index(after: index)
+            continue
+        }
+
+        let character = raw[index]
+        if character == "\r" {
+            let nextIndex = raw.index(after: index)
+            if nextIndex >= raw.endIndex || raw[nextIndex] != "\n" {
+                output.append("\n")
+            }
+        } else if character == "\u{08}" || character == "\u{7f}" {
+            if !output.isEmpty {
+                output.removeLast()
+            }
+        } else {
+            output.append(character)
+        }
+        index = raw.index(after: index)
+    }
+}
+
 private struct TerminalTextSurface: UIViewRepresentable {
     let text: String
     let onInput: (String) -> Void
@@ -199,7 +317,9 @@ private struct TerminalTextSurface: UIViewRepresentable {
     func updateUIView(_ uiView: TerminalUITextView, context: Context) {
         if uiView.text != text {
             uiView.text = text
-            let bottom = NSRange(location: max(uiView.text.count - 1, 0), length: 1)
+            let end = NSRange(location: uiView.text.count, length: 0)
+            uiView.selectedRange = end
+            let bottom = NSRange(location: max(uiView.text.count - 1, 0), length: min(uiView.text.count, 1))
             uiView.scrollRangeToVisible(bottom)
         }
         uiView.inputHandler = onInput
@@ -216,11 +336,18 @@ private struct TerminalTextSurface: UIViewRepresentable {
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
             guard let terminalView = textView as? TerminalUITextView else { return false }
             if text.isEmpty {
-                terminalView.inputHandler?("\u{7f}")
+                terminalView.sendBackspace()
             } else {
                 terminalView.inputHandler?(text == "\n" ? "\r" : text)
             }
             return false
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            let end = NSRange(location: textView.text.count, length: 0)
+            if textView.selectedRange.location != end.location || textView.selectedRange.length != 0 {
+                textView.selectedRange = end
+            }
         }
     }
 }
@@ -230,6 +357,14 @@ private final class TerminalUITextView: UITextView {
 
     override var canBecomeFirstResponder: Bool {
         true
+    }
+
+    override func deleteBackward() {
+        sendBackspace()
+    }
+
+    func sendBackspace() {
+        inputHandler?("\u{7f}")
     }
 }
 
